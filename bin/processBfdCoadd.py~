@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+from lsst.meas.extensions.bfd.processBfdCoadd import ProcessBfdCoaddTask
+ProcessBfdCoaddTask.parseAndSubmit()
+
