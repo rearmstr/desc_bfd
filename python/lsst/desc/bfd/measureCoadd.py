@@ -63,6 +63,11 @@ class MeasureCoaddConfig(MeasureImageTask.ConfigClass):
         dtype = str,
         default = "deep",
     )
+    oldHSC = lsst.pex.config.Field(
+        doc = "allow ability to run on old HSC data",
+        dtype = bool,
+        default = False,
+    )
     noiseGrow = lsst.pex.config.Field(
         doc = "how large should the footprint be grown to measure the noise",
         dtype = int,
@@ -120,7 +125,10 @@ class MeasureCoaddTask(MeasureImageTask):
         """Return a lsst.pipe.base.Struct containing the Exposure to fit, catalog, measurement
         of the pixel variance and covariance of the matrix as determined by the Psf
         """
-        exposure = dataRef.get(self.config.coaddName + "Coadd_calexp", immediate=True)
+        name = self.config.coaddName + "Coadd_calexp"
+        if self.config.oldHSC:
+            name += "_hsc"
+        exposure = dataRef.get(name, immediate=True)
         return lsst.pipe.base.Struct(
             sources=dataRef.get(self.dataPrefix + "meas", immediate=True),
             exposure=exposure
