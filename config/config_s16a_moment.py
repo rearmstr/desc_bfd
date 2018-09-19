@@ -19,7 +19,7 @@ config.measure.plugins['bfdKMoment'].useRecVariance=True
 config.measure.plugins['bfdKMoment'].useTableVariance=False
 config.measure.algorithms['bfdKMoment'].useNoisePs = True
 
-
+config.measure.oldHSC = True
 config.measure.correlatedNoiseFile = "/tigress/rea3/bfd_update/desc_bfd/config/corr_ps.txt"
 config.measure.useCorrelatedNoise = True
 config.measure.minVariancePixels = 100
