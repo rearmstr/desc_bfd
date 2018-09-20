@@ -64,6 +64,9 @@ class BaseMeasureTask(BaseMeasurementTask):
     def run(self, dataRef):
         """Main driver
         """
+        if self.initialCheck(dataRef) is False:
+            return None
+
         self.log.info("Reading inputs")
         inputs = self.readInputs(dataRef)
         self.log.info("Preparing catalog")
@@ -91,6 +94,9 @@ class BaseMeasureTask(BaseMeasurementTask):
         to prepCatalog() and makeLikelihood()
         """
         raise NotImplementedError()
+
+    def initialCheck(self, dataRef):
+        return True
 
     def prepCatalog(self, inputs):
         """Prepare and return the output catalog

@@ -98,6 +98,11 @@ class MeasureCoaddConfig(MeasureImageTask.ConfigClass):
         dtype = int,
         default = 20,
     )
+    overWrite = lsst.pex.config.Field(
+        doc = "Overwrite existing file?",
+        dtype = bool,
+        default = True,
+    )
 
 class MeasureCoaddTask(MeasureImageTask):
     """Specialization of MeasureImageTask for running on calexps
@@ -120,6 +125,15 @@ class MeasureCoaddTask(MeasureImageTask):
         parser.add_id_argument("--id", "deepCoadd", help="data ID, e.g. --id tract=12345 patch=1,2",
                                ContainerClass=CoaddDataIdContainer)
         return parser
+
+    def initialCheck(self, dataRef):
+        """Check to see if we should overwrite existing file
+        If file already exists this will return false and exit the processing
+        """
+        if self.config.overWrite is False:
+             if dataRef.datasetExists(self.dataPrefix+"moment"):
+                    self.log.info('Moment already exists %s. skipping' % dataRef.dataId)
+                    return False
 
     def readInputs(self, dataRef):
         """Return a lsst.pipe.base.Struct containing the Exposure to fit, catalog, measurement
