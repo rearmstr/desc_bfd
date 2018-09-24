@@ -241,34 +241,30 @@ class MeasureCoaddTask(MeasureImageTask):
             # try multiples of the noiseGrow parameter until there are a sufficient number of pixels
             for scale in (1, 2, 4, 8):
 
-                #fp = lsst.afw.detection.growFootprint(ref.getFootprint(), scale*self.config.noiseGrow, True)
                 fp = source.getFootprint()
                 fp.dilate(scale*self.config.noiseGrow, afwGeom.Stencil.MANHATTAN)
 
                 if fp.getArea() == 0:
                     continue
+
                 fp.clipTo(exp.getBBox(lsst.afw.image.PARENT))
                 box = fp.getBBox()
-                #mask = getMaskFromFootprint(exp.getMaskedImage().getMask(), fp, badBit)
+
                 span = fp.spans.intersectNot(exp.getMaskedImage().getMask()[box], badBit)
                 maskImage = afwImage.Mask(box, 0)
                 span.setMask(maskImage, 0x1)
                 mask = maskImage.array==0
 
-                #if numpy.sum(mask) <  self.config.minVariancePixels:
                 if span.getArea() <  self.config.minVariancePixels:
                     continue
 
-                #box.shift(self.xy0)
                 varSrc = numpy.nanvar(image[box].getArray()[mask])
                 meanSrc = numpy.nanmean(image[box].getArray()[mask])
 
                 failed = False
                 break
 
-
             if setFlags and failed:
-                
                 source.set('bfd.flags.variance', True)
                 source.set('bfd.flags', True)
                 return False
