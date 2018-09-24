@@ -150,7 +150,7 @@ class MeasureCoaddTask(MeasureImageTask):
 
     def selection(self, source, ref):
         
-        if ref.getParent()==0 and ref.get('deblend.nchild')>0:
+        if ref.getParent()==0 and ref.get('deblend_nchild')>0:
             source.set('bfd.flags.parent',True)
             source.set('bfd.flags',True)
             return False
@@ -162,7 +162,7 @@ class MeasureCoaddTask(MeasureImageTask):
             source.set('bfd.flags.footprint-empty',True)
             source.set('bfd.flags',True)
             return False
-        if ref.get('flags.pixel.saturated.center'):
+        if ref.get('flags_pixel_saturated_center'):
             source.set('bfd.flags.saturated.center',True)
             source.set('bfd.flags',True)
             return False

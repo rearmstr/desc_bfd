@@ -275,6 +275,8 @@ class MeasureImageTask(BaseMeasureTask):
         #for parentIdx, measParentRecord in enumerate(outCat):
 
             noiseReplacer.insertSource(ref.getId())
+            if not self.selection(source, ref):
+                    continue
             self.preMeasureImage(source, ref, exposure)
             self.callMeasure(source, exposure, beginOrder=beginOrder, endOrder=endOrder)
             noiseReplacer.removeSource(ref.getId())
