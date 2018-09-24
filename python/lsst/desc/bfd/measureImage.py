@@ -272,12 +272,13 @@ class MeasureImageTask(BaseMeasureTask):
                       nMeasCat - nMeasParentCat, ("" if nMeasCat - nMeasParentCat == 1 else "ren"))
 
         for i, (source, ref) in enumerate(zip(outCat, measCat)):
-        #for parentIdx, measParentRecord in enumerate(outCat):
+            self.preMeasureImage(source, ref, exposure)
 
+        for i, (source, ref) in enumerate(zip(outCat, measCat)):
             noiseReplacer.insertSource(ref.getId())
             if not self.selection(source, ref):
                     continue
-            self.preMeasureImage(source, ref, exposure)
+            self.preMeasure(source, ref, exposure)
             self.callMeasure(source, exposure, beginOrder=beginOrder, endOrder=endOrder)
             noiseReplacer.removeSource(ref.getId())
 
