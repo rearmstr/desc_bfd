@@ -260,9 +260,9 @@ namespace lsst { namespace desc { namespace bfd {
      record.set(_momentsPsfKey, value.momentsPsf);
      _centerKey.set(record, value.center);
      _shiftKey.set(record, value.shift);
-     // for (int b = 0; b < BfdKMomentResult::N_FLAGS; ++b) {
-     //     record.set(_flagsKey[b], value.flags[b]);
-     // }
+    for (int b = 0; b < BfdKMomentResult::N_FLAGS; ++b) {
+          record.set(_flagsKey[b], value.flags[b]);
+      }
  }
 
  BfdKMomentResult BfdKMomentResultKey::get(afw::table::BaseRecord const & record) const {
@@ -274,9 +274,9 @@ namespace lsst { namespace desc { namespace bfd {
      result.shift = _shiftKey.get(record);
      result.shift = record.get(_shiftKey);
      // Do not add flags for now because we need something better
-     // for (int b = 0; b < BfdKMomentResult::N_FLAGS; ++b) {
-     //   result.flags[b] = record.get(_flagsKey[b]);
-     // }
+     for (int b = 0; b < BfdKMomentResult::N_FLAGS; ++b) {
+        result.flags[b] = record.get(_flagsKey[b]);
+    }
 
      return result;
  }
