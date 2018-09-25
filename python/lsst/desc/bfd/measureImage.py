@@ -275,12 +275,23 @@ class MeasureImageTask(BaseMeasureTask):
             self.preMeasureImage(source, ref, exposure)
 
         for i, (source, ref) in enumerate(zip(outCat, measCat)):
-            noiseReplacer.insertSource(ref.getId())
             if not self.selection(source, ref):
-                    continue
-            self.preMeasure(source, ref, exposure)
-            self.callMeasure(source, exposure, beginOrder=beginOrder, endOrder=endOrder)
-            noiseReplacer.removeSource(ref.getId())
+                continue
+            inserted = False
+            try:
+                noiseReplacer.insertSource(ref.getId())
+                inserted = True
+                
+                self.preMeasure(source, ref, exposure)
+                self.callMeasure(source, exposure, beginOrder=beginOrder, endOrder=endOrder)
+            except Exception as e:
+                if inserted:
+                    noiseReplacer.removeSource(ref.getId())
+                continue
+
+            if inserted:
+                noiseReplacer.removeSource(ref.getId())
+            
 
 
         noiseReplacer.end()
