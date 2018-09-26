@@ -241,7 +241,7 @@ class MeasureCoaddTask(MeasureImageTask):
             # try multiples of the noiseGrow parameter until there are a sufficient number of pixels
             for scale in (1, 2, 4, 8):
 
-                fp = source.getFootprint()
+                fp = afwDet.Footprint(source.getFootprint())
                 fp.dilate(scale*self.config.noiseGrow, afwGeom.Stencil.MANHATTAN)
 
                 if fp.getArea() == 0:
