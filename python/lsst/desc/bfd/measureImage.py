@@ -275,16 +275,21 @@ class MeasureImageTask(BaseMeasureTask):
             self.preMeasureImage(source, ref, exposure)
 
         for i, (source, ref) in enumerate(zip(outCat, measCat)):
+            self.log.info('Measuring source %d',i)
             if not self.selection(source, ref):
+                self.log.info(' Not selected, skipping')
                 continue
             inserted = False
+            #if i>8200:
+            #    import pdb;pdb.set_trace()
             try:
                 noiseReplacer.insertSource(ref.getId())
                 inserted = True
                 
-                self.preMeasure(source, ref, exposure)
-                self.callMeasure(source, exposure, beginOrder=beginOrder, endOrder=endOrder)
+                #self.preMeasure(source, ref, exposure)
+                #self.callMeasure(source, exposure, beginOrder=beginOrder, endOrder=endOrder)
             except Exception as e:
+                self.log.info('Failed: %s',e)
                 if inserted:
                     noiseReplacer.removeSource(ref.getId())
                 continue
