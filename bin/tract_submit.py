@@ -4,6 +4,7 @@ import time,os,argparse
 from collections import deque
 import subprocess as sub
 import re
+import os
 
 def idSplit(id):
     if id is None:
@@ -18,7 +19,23 @@ def idSplit(id):
         else:
             ids.append(int(r))
     return ids
-master=[8278.8279,8280,8281,8282,8283,8284,8285,8286,8519,8520,8521,8522,8523,8524,8525,8526,8527,8761,8762,8763,8764,8765,8766,8767,8768,8769,9003,9004,9005,9006,9007,9008,9009,9010,9070,9071,9072,9073,9074,9075,9076,9077,9078,9079,9102,9103,9104,9105,9106,9107,9125,9126,9127,9128,9129,9130,9131,9132,9133,9134,9135,9206,9207,9208,9209,9210,9211,9212,9213,9214,9215,9246,9247,9248,9249,9312,9313,9314,9315,9316,9317,9318,9319,9320,9321,9322,9344,9345,9346,9347,9348,9349,9350,9368,9369,9370,9371,9372,9373,9374,9375,9376,9377,9378,9448,9449,9450,9451,9452,9453,9454,9455,9456,9457,9458,9459,9555,9556,9557,9558,9559,9560,9561,9562,9563,9564,9565,9566,9587,9588,9589,9590,9591,9592,9593,9611,9612,9613,9614,9615,9616,9617,9618,9619,9620,9621,9691,9692,9693,9694,9695,9696,9697,9698,9699,9700,9701,9702,9798,9799,9800,9801,9802,9803,9804,9805,9806,9807,9808,9830,9831,9832,9833,9834,9835,9855,9856,9857,9858,9859,9860,9861,9933,9934,9935,9936,9937,9938,9939,9940,9941,9942,9943,9944,10040,10041,10042,10043,10044,10045,10046,10047,10048,10049,10176,10177,10178,10179,10180,10181,10182,10183,10185,10287,10288,10289,10290,10291,15827,15828,15829,15830,15831,15832,15833,16005,16006,16007,16008,16009,16010,16011,16012,16182,16183,16184,16185]
+master=[8278,8279,8280,8281,8282,8283,8284,8285,8286,8519,8520,8521,8522,8523,8524,
+        8525,8526,8527,8761,8762,8763,8764,8765,8766,8767,8768,8769,9003,9004,9005,
+        9006,9007,9008,9009,9010,9070,9071,9072,9073,9074,9075,9076,9077,9078,9079,
+        9102,9103,9104,9105,9106,9107,9125,9126,9127,9128,9129,9130,9131,9132,9133,
+        9134,9135,9206,9207,9208,9209,9210,9211,9212,9213,9214,9215,9246,9247,9248,
+        9249,9312,9313,9314,9315,9316,9317,9318,9319,9320,9321,9322,9344,9345,9346,
+        9347,9348,9349,9350,9368,9369,9370,9371,9372,9373,9374,9375,9376,9377,9378,
+        9448,9449,9450,9451,9452,9453,9454,9455,9456,9457,9458,9459,9555,9556,9557,
+        9558,9559,9560,9561,9562,9563,9564,9565,9566,9587,9588,9589,9590,9591,9592,
+        9593,9611,9612,9613,9614,9615,9616,9617,9618,9619,9620,9621,9691,9692,9693,
+        9694,9695,9696,9697,9698,9699,9700,9701,9702,9798,9799,9800,9801,9802,9803,
+        9804,9805,9806,9807,9808,9830,9831,9832,9833,9834,9835,9855,9856,9857,9858,
+        9859,9860,9861,9933,9934,9935,9936,9937,9938,9939,9940,9941,9942,9943,9944,
+        10040,10041,10042,10043,10044,10045,10046,10047,10048,10049,10176,10177,10178,
+        10179,10180,10181,10182,10183,10185,10287,10288,10289,10290,10291,15827,15828,
+        15829,15830,15831,15832,15833,16005,16006,16007,16008,16009,16010,16011,16012,
+        16182,16183,16184,16185]
 
 xmm=[8038,8039,8278,8279,8280,8281,8282,8283,8284,8285,8286,8519,8520,8521,8522,8523,8524,8525,8526,8527,8761,8761,8762,8763,8764,8765,8766,8767,8768,8769,9003,9004,9005,9006,9007,9008,9009,9010,9011,9245,9246,9247,9248,9249,9250,9251,9252,9253,9488,9489,9490,9491,9492,9493,9494,9495,9732,9733,9734,9735,9736,9737]
 gama9=[9069,9070,9071,9072,9073,9074,9075,9076,9077,9078,9079,9080,9081,9082,9083,9312,9313,9314,9315,9316,9317,9318,9319,9320,9321,9322,9323,9324,9325,9326,9555,9556,9557,9558,9559,9560,9561,9562,9563,9564,9565,9566,9567,9568,9569,9797,9798,9799,9800,9801,9802,9803,9804,9805,9806,9807,9808,9809,9810,9811,10039,10040,10041,10042,10043,10044,10045,10046,10047,10048,10049,10282,10283,10284,10285,10286,10287,10288,10289,10290,10291,10292]
@@ -33,6 +50,7 @@ tract_dict = {
     'gama15': gama15,
     'hect': hect,
     'vvds': vvds,
+    'wide12': wide12,
     'all': master
 }
 
@@ -48,16 +66,20 @@ parser.add_argument('--hours',type=int,default=8,
                     help='how many hours')
 parser.add_argument('--mins',type=int,default=0,
                     help='how many minutes')
-parser.add_argument('--mem',type=int,default=43000,
+parser.add_argument('--mem',type=int,default=None,
                     help='memory needed in MB')
 parser.add_argument('--n_threads',type=int,default=1,
                     help='number of threads')
 parser.add_argument('--arg',default='',
                     help='generic arguments')
 parser.add_argument('--tracts', default='8523',help='which tracts')
-parser.add_argument('--field', default=None,help='which tracts')
+parser.add_argument('--field', default=None,
+                               help='specify field from [all, xmm, hect, gama15, gama9, vvds, wide12]')
+parser.add_argument('--bank', default=None,help='which bank to use')
+parser.add_argument('--queue', default=None,help='which queue to use')
 
 args = parser.parse_args()
+
 if args.field is None:
     tracts = idSplit(args.tracts)
 else:
@@ -69,11 +91,12 @@ tract_lists=[tracts[i::args.njobs] for i in range(args.njobs)]
 
 # convert options to dictionary to use with format
 dict=vars(args)
+user = os.getlogin()
 
 for ii,tract_list in enumerate(tract_lists):
     submit_list = '^'.join([str(tract) for tract in tract_list])
     while True:
-        pipe = sub.Popen(['squeue','-u','rea3'],stdout=sub.PIPE)
+        pipe = sub.Popen(['squeue','-u', '%s' % user ],stdout=sub.PIPE)
         # count the number of jobs currently running
         q_out=pipe.communicate()[0]
         num=len(str(q_out).split('\n'))-1
@@ -86,12 +109,27 @@ for ii,tract_list in enumerate(tract_lists):
     use_arg += ' --id filter=HSC-I tract=%s' %(submit_list)
 
     dict['use_arg'] = use_arg
+
+    dict['batch_bank'] = ''
+    if args.bank is not None:
+        dict['batch_bank'] = '#SBATCH -A %s' % args.bank
+
+    dict['batch_queue'] = ''
+    if args.queue is not None:
+        dict['batch_queue'] = '#SBATCH -p %s' % args.queue
+
+    dict['batch_mem'] = ''
+    if args.mem is not None:
+        dict['memory'] = '#SBATCH --mem %d' % args.mem
+
     submit_text="""#!/bin/bash
 #SBATCH -N 1
 #SBATCH -c {n_threads}
 #SBATCH --output={output}
 #SBATCH -t {hours}:{mins:02d}:00
-#SBATCH --mem {mem}
+{batch_mem}
+{batch_bank}
+{batch_queue}
 {exe} {use_arg} """.format(**dict)
 
 
@@ -100,6 +138,6 @@ for ii,tract_list in enumerate(tract_lists):
     ofile.write(submit_text)
     ofile.close()
     os.system('sbatch %s' % (submit_file))
-#
+
 
 
