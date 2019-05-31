@@ -11,7 +11,7 @@ from lsst.meas.base.pluginRegistry import register
 import numpy as np
 
 import bfd
-import bfd.config
+from .config import BFDConfig
 import galsim
 
 usingHSC = True
@@ -50,8 +50,7 @@ class PythonBfdShearedMoment(SingleFramePlugin):
         SingleFramePlugin.__init__(self, config, name, schema, metadata)
 
 
-        self.bfd_build = bfd.config.Config(use_mag=True, use_conc=True)
-        self.bfd_config = self.bfd_build.BFDConfig()
+        self.bfd_config = BFDConfig(use_mag=True, use_conc=True)
 
         NMoment = self.bfd_config.MSIZE
         self.moment = schema.addField('moment', type="ArrayF", size=NMoment, doc="Even Bfd moments")
@@ -101,7 +100,7 @@ class PythonBfdShearedMoment(SingleFramePlugin):
         kdata = bfd.generalImage(image, uvref, psf_image, wcs=bfd_wcs, pixel_noise=1)
         conjugate = set(np.where(kdata.conjugate.flatten()==False)[0])
 
-        kgal = self.bfd_build.KGalaxy(self.weight, kdata.kval.flatten(), kdata.kx.flatten(), kdata.ky.flatten(), 
+        kgal = self.bfd_config.KGalaxy(self.weight, kdata.kval.flatten(), kdata.kx.flatten(), kdata.ky.flatten(), 
                                       kdata.kvar.flatten(), kdata.d2k, conjugate);
 
         g1 = np.random.rand()*(2*self.config.max_g) - self.config.max_g
