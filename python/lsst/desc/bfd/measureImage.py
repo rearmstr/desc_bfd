@@ -75,63 +75,6 @@ class MeasureImageConfig(BaseMeasureConfig):
 
 class MeasureImageTask(BaseMeasureTask):
     """!
-    @anchor MeasureImageTask_
-    @brief A subtask for measuring the properties of sources on a single exposure.
-    The task is configured with a list of "plugins": each plugin defines the values it
-    measures (i.e. the columns in a table it will fill) and conducts that measurement
-    on each detected source (see MeasureImage).  The job of the
-    measurement task is to initialize the set of plugins (which includes setting up the
-    catalog schema) from their configuration, and then invoke each plugin on each
-    source.
-    When run after the deblender (see lsst.meas.deblender.SourceDeblendTask),
-    MeasureImageTask also replaces each source's neighbors with noise before
-    measuring each source, utilizing the HeavyFootprints created by the deblender (see
-    NoiseReplacer).
-    MeasureImageTask has only two methods: __init__() and run().  For configuration
-    options, see MeasureImageConfig.
-    @section meas_base_sfm_Example	A complete example of using MeasureImageTask
-    The code below is in examples/runSingleFrameTask.py
-    @dontinclude runSingleFrameTask.py
-    See meas_algorithms_detection_Example for more information on SourceDetectionTask.
-    First, import the required tasks (there are some other standard imports;
-    read the file if you're confused):
-    @skip SourceDetectionTask
-    @until MeasureImageTask
-    We need to create our tasks before processing any data as the task constructors
-    can add extra columns to the schema.  The most important argument we pass these to these
-    is an lsst.afw.table.Schema object, which contains information about the fields (i.e. columns) of the
-    measurement catalog we'll create, including names, types, and additional documentation.
-    Tasks that operate on a catalog are typically passed a Schema upon construction, to which
-    they add the fields they'll fill later when run.  We construct a mostly empty Schema that
-    contains just the fields required for a SourceCatalog like this:
-    @skipline schema
-    Now we can configure and create the SourceDetectionTask:
-    @until detectionTask
-    We then move on to configuring the measurement task:
-    @until config
-    While a reasonable set of plugins is configured by default, we'll customize the list.
-    We also need to unset one of the slots at the same time, because we're
-    not running the algorithm that it's set to by default, and that would cause problems later:
-    @until psfFlux
-    Now, finally, we can construct the measurement task:
-    @skipline measureTask
-    After constructing all the tasks, we can inspect the Schema we've created:
-    @skipline print schema
-    All of the fields in the
-    schema can be accessed via the get() method on a record object.  See afwTable for more
-    information.
-    We're now ready to process the data (we could loop over multiple exposures/catalogs using the same
-    task objects).  First create the output table and process the image to find sources:
-    @skipline afwTable
-    @skip result
-    @until sources
-    Then measure them:
-    @skipline measure
-    We then might plot the results (@em e.g. if you set `--ds9` on the command line)
-    @skip display
-    @until RED
-    and end up with something like
-    @image html runSingleFrameTask-ds9.png
     """
 
     ConfigClass = MeasureImageConfig
@@ -220,7 +163,7 @@ class MeasureImageTask(BaseMeasureTask):
             # Start by setting some miscellaneous calculated fields
             outRecord.assign(srcRecord, mapper)
             outRecord.setCoord(srcRecord.getCoord())
-            outRecord.set('id',srcRecord.getId())
+            outRecord.set('id', srcRecord.getId())
 
             # Next we determine the pixel region we want to fit.
             if self.config.nGrow > 0:

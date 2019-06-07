@@ -466,6 +466,7 @@ PYBIND11_MODULE(pybind_bfd, mod) {
   declareKSigmaWeight<float>(mod, true);
   declareUniformDeviate<double>(mod, "UniformDeviate");
 
+  // Fix-center=False, concentration=False, mag=False, colors=0, float=True
   declareBfdConfig<false, false, false, 0, true>(mod, false, false, false, 0,
                                                  true);
   declareMoment<false, false, false, 0, true>(mod, false, false, false, 0,
@@ -482,6 +483,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                    true);
   declarePqr<false, false, false, 0, true>(mod, false, false, false, 0, true);
 
+
+  // Fix-center=False, concentration=False, mag=True, colors=0, float=True
   declareBfdConfig<false, false, true, 0, true>(mod, false, false, true, 0,
                                                 true);
   declareMoment<false, false, true, 0, true>(mod, false, false, true, 0, true);
@@ -496,6 +499,7 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                   true);
   declarePqr<false, false, true, 0, true>(mod, false, false, true, 0, true);
 
+  // Fix-center=False, concentration=True, mag=True, colors=0, float=True
   declareBfdConfig<false, true, true, 0, true>(mod, false, true, true, 0, true);
   declareMoment<false, true, true, 0, true>(mod, false, true, true, 0, true);
   declareMomentCov<false, true, true, 0, true>(mod, false, true, true, 0, true);
