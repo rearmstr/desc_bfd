@@ -73,6 +73,9 @@ using PyTargetGalaxy = py::class_<TargetGalaxy<CONFIG>>;
 template <class CONFIG>
 using PyTemplateGalaxy = py::class_<TemplateGalaxy<CONFIG>>;
 
+template <class CONFIG>
+using PyTemplateInfo = py::class_<TemplateInfo<CONFIG>>;
+
 template <class FP>
 using PyUniformDeviate = py::class_<ran::UniformDeviate<FP>>;
 
@@ -354,6 +357,29 @@ static void declareTemplateGalaxy(py::module &mod, bool fix_center,
   cls.attr("DSIZE") = py::int_(TG::DSIZE);
 }
 
+
+template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
+          bool USE_FLOAT>
+static void declareTemplateInfo(py::module &mod, bool fix_center,
+                                bool use_conc, bool use_mag, int n_colors,
+                                bool use_float) {
+  std::string label = optionsToString("TemplateInfo", FIX_CENTER, USE_CONC,
+                                      USE_MAG, N_COLORS, USE_FLOAT);
+
+  typedef BfdConfig<FIX_CENTER, USE_CONC, USE_MAG, N_COLORS, USE_FLOAT> BC;
+
+  PyTemplateInfo<BC> cls(mod, label.c_str());
+  cls.def(py::init<>());
+  cls.def(py::init<const TemplateGalaxy<BC>& >(), "tmpl"_a);
+  cls.def_readwrite("dm", &TemplateInfo<BC>::dm);
+  cls.def_readwrite("dxy", &TemplateInfo<BC>::dxy);
+  cls.def_readwrite("nda", &TemplateInfo<BC>::nda);
+  cls.def_readwrite("id", &TemplateInfo<BC>::id);
+  cls.def_readwrite("m", &TemplateInfo<BC>::m);
+  cls.def("getM", &TemplateInfo<BC>::getM);
+  cls.def("setM", &TemplateInfo<BC>::setM, "_m"_a);
+}
+
 template <class FP>
 static void declareUniformDeviate(py::module &mod, std::string label) {
   PyUniformDeviate<FP> cls(mod, label.c_str());
@@ -479,6 +505,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                     true);
   declareTemplateGalaxy<false, false, false, 0, true>(mod, false, false, false,
                                                       0, true);
+  declareTemplateInfo<false, false, false, 0, true>(mod, false, false, false,
+                                                      0, true);
   declareKDTreePrior<false, false, false, 0, true>(mod, false, false, false, 0,
                                                    true);
   declarePqr<false, false, false, 0, true>(mod, false, false, false, 0, true);
@@ -495,6 +523,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                    true);
   declareTemplateGalaxy<false, false, true, 0, true>(mod, false, false, true, 0,
                                                      true);
+  declareTemplateInfo<false, false, true, 0, true>(mod, false, false, true, 0,
+                                                     true);
   declareKDTreePrior<false, false, true, 0, true>(mod, false, false, true, 0,
                                                   true);
   declarePqr<false, false, true, 0, true>(mod, false, false, true, 0, true);
@@ -508,6 +538,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                   true);
   declareTemplateGalaxy<false, true, true, 0, true>(mod, false, true, true, 0,
                                                     true);
+  declareTemplateInfo<false, true, true, 0, true>(mod, false, true, true, 0,
+                                                    true);
   declareKDTreePrior<false, true, true, 0, true>(mod, false, true, true, 0,
                                                  true);
   declarePqr<false, true, true, 0, true>(mod, false, true, true, 0, true);
@@ -520,6 +552,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
   declareTargetGalaxy<false, true, true, 5, true>(mod, false, true, true, 5,
                                                   true);
   declareTemplateGalaxy<false, true, true, 5, true>(mod, false, true, true, 5,
+                                                    true);
+  declareTemplateInfo<false, true, true, 5, true>(mod, false, true, true, 5,
                                                     true);
   declareKDTreePrior<false, true, true, 5, true>(mod, false, true, true, 5,
                                                  true);
