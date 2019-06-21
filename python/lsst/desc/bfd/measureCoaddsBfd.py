@@ -14,6 +14,9 @@ from . import KSigmaWeightF
 from .KColorGalaxy import KColorGalaxy
 
 
+__all__ = ("MeasureCoaddsBfdConfig", "MeasureCoaddsBfdTask")
+
+
 class MeasureCoaddsBfdConfig(ProcessCoaddsTogetherConfig):
     """
     basic config loads filters and misc stuff
@@ -41,6 +44,8 @@ class MeasureCoaddsBfdConfig(ProcessCoaddsTogetherConfig):
     weight_sigma = Field(dtype=float, default=1.25, doc="sigma for k-sigma weight function")
     max_shift = Field(dtype=float, default=4, doc="maximum centroid shift")
     add_single_bands = Field(dtype=bool, default=True, doc="add single band measurements")
+    coaddName = Field(dtype=str, default='deep', doc="name of coadd")
+    grid_size = Field(dtype=int, default=48, doc="minimum size of pixel grid when computing moments")
 
     def setDefaults(self):
         """
@@ -97,6 +102,8 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         self.flag = schema.addField('bfd_flag', type="Flag", doc="Set to 1 for any fatal failure")
         self.centroid_flag = schema.addField('bfd_flag_centroid', type="Flag",
                                              doc="Set to 1 for any fatal failure of centroid")
+        self.parent_flag = schema.addField('bfd_flag_parent', type="Flag",
+                                            doc="Set to 1 for parents")
         if self.config.add_single_bands:
             self.filter_keys = defaultdict(dict)
             self.n_even_single = self.n_even - len(self.config.filters) + 1
@@ -167,11 +174,14 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
 
         #for n, (refRecord) in enumerate(zip(ref)):
         for n, (refRecord, outRecord) in enumerate(zip(ref, output)):
-            if n < min_index or n > max_index:
+            if n < min_index or n >= max_index:
                 continue
 
-            #if self.selection(refRecord) is False:
-            #    continue
+            if refRecord.get('deblend_nChild') != 0:
+                outRecord.set(self.flag, 1)
+                outRecord.set(self.parent_flag, 1)
+                continue
+
             #outRecord = output.table.copyRecord(refRecord, self.mapper)
             #output._append(outRecord)
 
@@ -185,17 +195,14 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                 r.insertSource(refRecord.getId())
 
             try:
-                kgals = []
-                for band in self.config.filters:
-                    kgals.append(self.buildKGalaxy(refRecord, images[band]))
-
+                kgals = self.buildKGalaxy(refRecord, images)
                 kc = KColorGalaxy(self.bfd, kgals)
 
             except Exception as e:
-                self.log.error(e)
                 kc = None
 
             if kc is None:
+                outRecord.set(self.flag, 1)
                 continue
 
             dx, badcentering, msg = kc.recenter(self.config.weight_sigma)
@@ -204,7 +211,7 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                 self.log.info('Bad centering %s', msg)
                 outRecord.set(self.flag, 1)
                 outRecord.set(self.centroid_flag, 1)
-                continue
+                dx = [0, 0]
 
             mom, cov = kc.get_moment(dx[0], dx[1], True)
             mom_even = mom.m
@@ -243,7 +250,10 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
             # Remove the deblended pixels for this object so we can process the next one.
             for r in replacers.values():
                 r.removeSource(refRecord.getId())
-
+            del kgals
+            del kc
+            del mom
+            del cov
         # Restore all original pixels in the images.
         if replacers is not None:
             for r in replacers.values():
@@ -253,15 +263,16 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         self.log.info('time: %g min' % (tm/60.0))
         self.log.info('time per: %g sec' % (tm/nproc))
 
-        return Struct(output=output)
+        return Struct(output=output[min_index:max_index])
 
-    def buildKGalaxy(self, record, exposure):
+    def buildKGalaxy(self, record, exposures):
 
         center = record.getCentroid()
-        local_lin_wcs = exposure.getWcs().linearizePixelToSky(center, afwGeom.arcseconds)
+        band = self.config.filters[0]
+        local_lin_wcs = exposures[band].getWcs().linearizePixelToSky(center, afwGeom.arcseconds)
 
         jacobian = local_lin_wcs.getLinear().getMatrix()
-        sky_pos = exposure.getWcs().pixelToSky(center)
+        sky_pos = exposures[band].getWcs().pixelToSky(center)
         uvref = (sky_pos.getRa().asArcseconds(), sky_pos.getDec().asArcseconds())
 
         box = record.getFootprint().getBBox()
@@ -269,18 +280,21 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
 
         bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
 
-        factor = exposure.getMetadata().get('variance_scale')
-        noise = np.median(exposure.variance[box].array)/factor
+        kgals = []
+        for band in self.config.filters:
+            exposure = exposures[band]
+            factor = exposure.getMetadata().get('variance_scale')
+            noise = np.sqrt(np.median(exposure.variance[box].array)/factor)
+            image = exposure.image[box].array
 
-        image = exposure.image[box].array
+            psf_image = exposure.getPsf().computeKernelImage(center).array
 
-        psf_image = exposure.getPsf().computeKernelImage(center).array
-
-        kdata = bfd.generalImage(image, uvref, psf_image, wcs=bfd_wcs, pixel_noise=noise)
-        conjugate = set(np.where(kdata.conjugate.flatten()==False)[0])
-        kgal = self.bfd.KGalaxy(self.weight, kdata.kval.flatten(), kdata.kx.flatten(), kdata.ky.flatten(),
-                                kdata.kvar.flatten(), kdata.d2k, conjugate)
-        return kgal
+            kdata = bfd.generalImage(image, uvref, psf_image, wcs=bfd_wcs, pixel_noise=noise, size=self.config.grid_size)
+            conjugate = set(np.where(kdata.conjugate.flatten()==False)[0])
+            kgal = self.bfd.KGalaxy(self.weight, kdata.kval.flatten(), kdata.kx.flatten(), kdata.ky.flatten(),
+                                    kdata.kvar.flatten(), kdata.d2k, conjugate)
+            kgals.append(kgal)
+        return kgals
 
     def selection(self, ref):
         childName = 'deblend_nChild'
