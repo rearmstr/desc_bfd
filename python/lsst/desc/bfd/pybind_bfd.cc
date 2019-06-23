@@ -107,6 +107,7 @@ static void declareBfdConfig(py::module &mod, bool fix_center, bool use_conc,
   cls.attr("G1") = py::int_(BC::G1);
   cls.attr("G2") = py::int_(BC::G2);
   cls.attr("MU") = py::int_(BC::MU);
+  cls.attr("DSIZE") = py::int_(BC::DSIZE);
 }
 
 template <class BC>
@@ -430,6 +431,10 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
     return std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
   });
   cls.def("setSampleWeights", &KDTreePrior<BC>::setSampleWeights, "b"_a);
+  cls.def("addTemplate", &KDTreePrior<BC>::addTemplate, "gal"_a, "flip"_a = true);
+  cls.def("addTemplateInfo", &KDTreePrior<BC>::addTemplateInfo, "info"_a);
+  cls.def_readonly("templates", &KDTreePrior<BC>::templatePtrs, 
+                   py::return_value_policy::reference_internal);
 }
 
 template <class BC>
