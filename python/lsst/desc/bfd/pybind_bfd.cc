@@ -11,6 +11,10 @@
 #include "Pqr.h"
 #include "Random.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 namespace py = pybind11;
 using namespace pybind11::literals;
 using namespace bfd;
@@ -356,7 +360,7 @@ static void declareTemplateGalaxy(py::module &mod, bool fix_center,
   cls.attr("DVb_DVb") = py::int_(TG::DVb_DVb);
   cls.attr("DV_DVb") = py::int_(TG::DVb_DVb);
   cls.attr("DSIZE") = py::int_(TG::DSIZE);
-}
+} 
 
 
 template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
@@ -391,9 +395,12 @@ static void declareUniformDeviate(py::module &mod, std::string label) {
 
 template <class CONFIG>
 class PqrWrapper {
+  typedef typename CONFIG::PqrVector PqrVector;
+
  public:
-  PqrWrapper() {}
+  PqrWrapper(): p() {}
   PqrWrapper(Pqr<CONFIG> _p) : p(_p) {}
+  PqrWrapper(PqrVector _p) : p(_p) {}
   Pqr<CONFIG> p;
 };
 
@@ -423,12 +430,27 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
           "sigmaCutoff_"_a = 6.5, "sigmaBuffer_"_a = 1.,
           "invariantCovariance_"_a = false, "fixedNoise_"_a = false);
   cls.def("prepare", &KDTreePrior<BC>::prepare);
-  // cls.def("getPqr", &KDTreePrior<BC>::getPqr, "gal"_a, "nTemplates"_a,
-  // "nUnique"_a) ;
-  cls.def("getPqr", [](const KDTreePrior<BC> &self, const TargetGalaxy<BC> &gal,
-                       int &nTemplates, int &nUnique) {
+  cls.def("getPqr", [](const KDTreePrior<BC> &self, const TargetGalaxy<BC> &gal) {
+    int  nTemplates, nUnique;
     Pqr<BC> pqr = self.getPqr(gal, nTemplates, nUnique);
     return std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+  });
+  cls.def("getPqrCatalog", [](const KDTreePrior<BC> &self, const vector<TargetGalaxy<BC>> &gals, int nthreads, int chunk) {
+  
+    vector<tuple<PqrWrapper<BC>, int, int>> results(gals.size());
+    int index=0;
+    int nTemplates, nUnique;
+
+#ifdef _OPENMP
+    omp_set_num_threads(nthreads);
+#pragma omp parallel for schedule(dynamic, chunk)
+#endif
+    for (int i=0;i < gals.size(); ++i) {
+      Pqr<BC> pqr = self.getPqr(gals[i], nTemplates, nUnique);
+      results[index]=std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+      index+=1;
+    }
+    return results;
   });
   cls.def("setSampleWeights", &KDTreePrior<BC>::setSampleWeights, "b"_a);
   cls.def("addTemplate", &KDTreePrior<BC>::addTemplate, "gal"_a, "flip"_a = true);
@@ -462,7 +484,8 @@ static void declarePqr(py::module &mod, bool fix_center, bool use_conc,
   typedef linalg::DVector DVector;
 
   py::class_<PqrWrapper<BC>> cls(mod, label.c_str());
-  cls.def(py::init<PqrVector>(), "pqr"_a = PqrVector());
+  cls.def(py::init<>());
+  cls.def(py::init<PqrVector>(), "pqr"_a);
   cls.def_readwrite("_pqr", &PqrWrapper<BC>::p);
   cls.def("getP", [](PqrWrapper<BC> const &self) { return self.p.getP(); });
   cls.def("getQ", [](PqrWrapper<BC> const &self) { return self.p.getQ(); });
@@ -477,8 +500,13 @@ static void declarePqr(py::module &mod, bool fix_center, bool use_conc,
             return PqrWrapper<BC>(self.p *= other.p);
           },
           py::is_operator());
+  cls.def("__add__",
+          [](PqrWrapper<BC> &self, const PqrWrapper<BC> &other) {
+            return PqrWrapper<BC>(self.p += other.p);
+          },
+          py::is_operator());
   cls.def("neglog",
-          [](PqrWrapper<BC> &self) { PqrWrapper<BC>(self.p.neglog()); });
+          [](PqrWrapper<BC> &self) { return PqrWrapper<BC>(self.p.neglog()); });
   cls.def("rotate",
           [](PqrWrapper<BC> &self, double theta) { self.p.rotate(theta); });
   cls.def("getG", [](PqrWrapper<BC> &self) {
