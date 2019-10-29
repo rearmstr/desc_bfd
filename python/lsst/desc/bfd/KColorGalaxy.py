@@ -106,13 +106,13 @@ class KColorGalaxy:
         for kgal, weight in zip(self.kgals, self.weights):
             shifted = kgal.getShifted(dx, dy)
             template = shifted.getTemplate()
-            even_out += template.mDeriv
-            odd_out += template.xyDeriv
+            even_out += template.mDeriv*weight
+            odd_out += template.xyDeriv*weight
 
         even_out[0, :] = single_templates[0].mDeriv[0, :]
 
-        for j in range(1, t.MSIZE-t.MC0):
-            even_out[t.MC0 + j, :] = single_templates[j].mDeriv[0, :]
+        for j in range(0, t.MSIZE-t.MC0):
+            even_out[t.MC0 + j, :] = single_templates[j + 1].mDeriv[0, :]
 
         t = self.bfd_build.TemplateGalaxy(even_out, odd_out, self.nda, self.id)
         return t
