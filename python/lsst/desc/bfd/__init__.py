@@ -28,4 +28,5 @@ from .moment_cpp import *
 from .sheared_moment import *
 from .measureCoaddsTogether import *
 from .measureCoaddsBfd import *
+from .measureCoaddsPrior import *
 
