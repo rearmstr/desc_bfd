@@ -86,6 +86,9 @@ using PyUniformDeviate = py::class_<ran::UniformDeviate<FP>>;
 template <class CONFIG>
 using PyKDTreePrior = py::class_<KDTreePrior<CONFIG>>;
 
+template <class CONFIG>
+using PyPrior = py::class_<Prior<CONFIG>>;
+
 template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
           bool USE_FLOAT>
 static void declareBfdConfig(py::module &mod, bool fix_center, bool use_conc,
@@ -459,6 +462,63 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
                    py::return_value_policy::reference_internal);
 }
 
+
+template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
+          bool USE_FLOAT>
+static void declarePrior(py::module &mod, bool fix_center, bool use_conc,
+                               bool use_mag, int n_colors, bool use_float) {
+  std::string label = optionsToString("Prior", FIX_CENTER, USE_CONC,
+                                      USE_MAG, N_COLORS, USE_FLOAT);
+
+  typedef BfdConfig<FIX_CENTER, USE_CONC, USE_MAG, N_COLORS, USE_FLOAT> BC;
+  typedef typename BC::FP FP;
+  typedef std::complex<FP> FPC;
+  typedef linalg::Vector<FP> Vector;
+  typedef linalg::Vector<std::complex<FP>> CVector;
+  typedef linalg::Matrix<FP> Matrix;
+  typedef linalg::Matrix<std::complex<FP>> CMatrix;
+  typedef linalg::DVector DVector;
+  typedef linalg::Matrix<std::complex<FP>> DerivMatrix;
+
+  PyPrior<BC> cls(mod, label.c_str());
+  cls.def(py::init<FP, FP, const MomentCovariance<BC> &,
+                   ran::UniformDeviate<double> &, bool, FP, FP, FP,
+                   bool, bool>(),
+          "fluxMin_"_a, "fluxMax_"_a, "nominalCov"_a, "ud_"_a, 
+          "selectionOnly_"_a = false, "noiseFactor"_a = 1., "sigmaStep_"_a = 1.,
+          "sigmaCutoff_"_a = 6.5, 
+          "invariantCovariance_"_a = false, "fixedNoise_"_a = false);
+  cls.def("prepare", &Prior<BC>::prepare);
+  cls.def("getPqr", [](const Prior<BC> &self, const TargetGalaxy<BC> &gal) {
+    int  nTemplates, nUnique;
+    Pqr<BC> pqr = self.getPqr(gal, nTemplates, nUnique);
+    return std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+  });
+  cls.def("getPqrCatalog", [](const Prior<BC> &self, const vector<TargetGalaxy<BC>> &gals, int nthreads, int chunk) {
+  
+    vector<tuple<PqrWrapper<BC>, int, int>> results(gals.size());
+    int index=0;
+    int nTemplates, nUnique;
+
+#ifdef _OPENMP
+    omp_set_num_threads(nthreads);
+#pragma omp parallel for schedule(dynamic, chunk)
+#endif
+    for (int i=0;i < gals.size(); ++i) {
+      Pqr<BC> pqr = self.getPqr(gals[i], nTemplates, nUnique);
+      results[index]=std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+      index+=1;
+    }
+    return results;
+  });
+  cls.def("addTemplate", &Prior<BC>::addTemplate, "gal"_a, "flip"_a = true);
+  cls.def("addTemplateInfo", &Prior<BC>::addTemplateInfo, "info"_a);
+  cls.def("getNTemplates", &Prior<BC>::getNTemplates);
+  //cls.def_readonly("templates", &Prior<BC>::templatePtrs, 
+  //                 py::return_value_policy::reference_internal);
+}
+
+
 template <class BC>
 std::string formatPqrStr(PqrWrapper<BC> const &self) {
   std::ostringstream os;
@@ -540,6 +600,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                       0, true);
   declareTemplateInfo<false, false, false, 0, true>(mod, false, false, false,
                                                       0, true);
+  declarePrior<false, false, false, 0, true>(mod, false, false, false, 0,
+                                                   true);
   declareKDTreePrior<false, false, false, 0, true>(mod, false, false, false, 0,
                                                    true);
   declarePqr<false, false, false, 0, true>(mod, false, false, false, 0, true);
@@ -558,6 +620,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                      true);
   declareTemplateInfo<false, false, true, 0, true>(mod, false, false, true, 0,
                                                      true);
+  declarePrior<false, false, true, 0, true>(mod, false, false, true, 0,
+                                                  true);
   declareKDTreePrior<false, false, true, 0, true>(mod, false, false, true, 0,
                                                   true);
   declarePqr<false, false, true, 0, true>(mod, false, false, true, 0, true);
@@ -573,6 +637,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                     true);
   declareTemplateInfo<false, true, true, 0, true>(mod, false, true, true, 0,
                                                     true);
+  declarePrior<false, true, true, 0, true>(mod, false, true, true, 0,
+                                                 true);
   declareKDTreePrior<false, true, true, 0, true>(mod, false, true, true, 0,
                                                  true);
   declarePqr<false, true, true, 0, true>(mod, false, true, true, 0, true);
@@ -588,6 +654,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                     true);
   declareTemplateInfo<false, true, true, 5, true>(mod, false, true, true, 5,
                                                     true);
+  declarePrior<false, true, true, 5, true>(mod, false, true, true, 5,
+                                                 true);
   declareKDTreePrior<false, true, true, 5, true>(mod, false, true, true, 5,
                                                  true);
   declarePqr<false, true, true, 5, true>(mod, false, true, true, 5, true);
