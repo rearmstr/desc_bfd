@@ -256,14 +256,14 @@ static void declareKGalaxy(py::module &mod, bool fix_center, bool use_conc,
   PyKGalaxy<BC> cls(mod, label.c_str());
   cls.def(py::init<const KSigmaWeight<FP> &, const CVector &, const Vector &,
                    const Vector &, FP, const std::set<int>, const DVector2 &,
-                   long>(),
+                   long, FP>(),
           "kw"_a, "kval"_a, "kx"_a, "ky"_a, "d2k"_a, "unconjugated"_a,
-          "posn_"_a = DVector2(0.), "id_"_a = 0L);
+          "posn_"_a = DVector2(0.), "id_"_a = 0L, "nda"_a = 1.);
   cls.def(py::init<const KSigmaWeight<FP> &, const CVector &, const Vector &,
                    const Vector &, const Vector &, FP, const std::set<int>,
-                   const DVector2 &, const long>(),
+                   const DVector2 &, const long, FP>(),
           "kw"_a, "kval"_a, "kx"_a, "ky"_a, "kvar_"_a, "d2k"_a,
-          "unconjugated"_a, "posn_"_a = DVector2(0.), "id_"_a = 0L);
+          "unconjugated"_a, "posn_"_a = DVector2(0.), "id_"_a = 0L, "nda"_a = 1.);
   cls.def("getSheared", &KGalaxy<BC>::getSheared, "g1"_a, "g2"_a, "mu"_a);
   cls.def("getMoment", &KGalaxy<BC>::getMoment);
   cls.def("getShifted", &KGalaxy<BC>::getShifted, "dx"_a, "dy"_a);
@@ -277,6 +277,8 @@ static void declareKGalaxy(py::module &mod, bool fix_center, bool use_conc,
   cls.def("getTemplate", &KGalaxy<BC>::getTemplate);
   cls.def("getShearedTarget", &KGalaxy<BC>::getShearedTarget, "g1"_a, "g2"_a,
           "mu"_a, "fillCovariance"_a = true);
+  cls.def("getNda", &KGalaxy<BC>::getNda);
+  cls.def("setNda", &KGalaxy<BC>::setNda, "nda_"_a);
 }
 
 template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
@@ -558,6 +560,16 @@ static void declarePqr(py::module &mod, bool fix_center, bool use_conc,
   cls.def("__mul__",
           [](PqrWrapper<BC> &self, const PqrWrapper<BC> &other) {
             return PqrWrapper<BC>(self.p *= other.p);
+          },
+          py::is_operator());
+  cls.def("__mul__",
+          [](PqrWrapper<BC> &self, FP other) {
+            return PqrWrapper<BC>(self.p * other);
+          },
+          py::is_operator());
+    cls.def("__truediv__",
+          [](PqrWrapper<BC> &self, FP other) {
+            return PqrWrapper<BC>(self.p / other);
           },
           py::is_operator());
   cls.def("__add__",
