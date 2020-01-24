@@ -443,7 +443,6 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
   cls.def("getPqrCatalog", [](const KDTreePrior<BC> &self, const vector<TargetGalaxy<BC>> &gals, int nthreads, int chunk) {
   
     vector<tuple<PqrWrapper<BC>, int, int>> results(gals.size());
-    int index=0;
     int nTemplates, nUnique;
 
 #ifdef _OPENMP
@@ -452,8 +451,7 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
 #endif
     for (int i=0;i < gals.size(); ++i) {
       Pqr<BC> pqr = self.getPqr(gals[i], nTemplates, nUnique);
-      results[index]=std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
-      index+=1;
+      results[i]=std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
     }
     return results;
   });
