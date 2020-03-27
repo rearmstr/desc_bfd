@@ -56,7 +56,7 @@ class BuildCovarianceConfig(pexConfig.Config):
     )
     label = pexConfig.Field(
         dtype=str,
-        default='b',
+        default='nb',
         optional=True,
         doc="This will be the labe for each"
     )
@@ -68,7 +68,7 @@ class BuildCovarianceConfig(pexConfig.Config):
     )
     maxPct = pexConfig.Field(
         dtype=float,
-        default=0.9,
+        default=90,
         optional=True,
         doc="The upper bound of noise variance to consider"
     )
@@ -93,16 +93,24 @@ class BuildCovarianceConfig(pexConfig.Config):
     momentFile = pexConfig.Field(
         dtype=str,
         default='',
-        optional=True,
+        optional=False,
         doc="Write combined moment file?  If not empty it will be written to a file"
     )
     band = pexConfig.Field(
         dtype=str,
-        default='r',
+        default='i',
         doc="filter"
     )
-    use_mag = pexConfig.Field(dtype=bool, default=True, doc="include magnification")
-    use_conc = pexConfig.Field(dtype=bool, default=True, doc="include concentration")
+    use_mag = pexConfig.Field(
+        dtype=bool,
+        default=False,
+        doc="include magnification"
+    )
+    use_conc = pexConfig.Field(
+        dtype=bool,
+        default=False,
+        doc="include concentration"
+    )
 
 
 class BuildCovarianceTask(pipeBase.CmdLineTask):
@@ -200,16 +208,14 @@ class BuildCovarianceTask(pipeBase.CmdLineTask):
             #
             # isotropize matrix
 
-            varE = 0.5*(tot_even[9] + tot_even[12])
+            varE = 0.5*(tot_even[7] + tot_even[9])
             tot_even[2] = 0
             tot_even[3] = 0
+            tot_even[5] = 0
             tot_even[6] = 0
-            tot_even[7] = 0
-            tot_even[10] = 0
-            tot_even[11] = 0
-            tot_even[13] = 0
+            tot_even[8] = 0
+            tot_even[7] = varE
             tot_even[9] = varE
-            tot_even[12] = varE
 
             varX = 0.5*(tot_odd[0] + tot_odd[2])
             tot_odd[1] = 0
