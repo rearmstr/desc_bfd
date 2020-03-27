@@ -1,13 +1,16 @@
 
 import time
-import numpy as np
 import bfd
-from collections import defaultdict
-import lsst.afw.geom as afwGeom
-from lsst.afw.table import SourceCatalog, SchemaMapper
 
+import numpy as np
+import lsst.afw.geom as afwGeom
+import lsst.geom as geom
+
+from collections import defaultdict
+from lsst.afw.table import SourceCatalog, SchemaMapper
 from lsst.pipe.base import Struct
-from lsst.pex.config import Field, ListField, ConfigField, Config, ChoiceField
+from lsst.pex.config import Field, ListField
+
 from .measureCoaddsTogether import ProcessCoaddsTogetherTask, ProcessCoaddsTogetherConfig
 from .config import BFDConfig
 from . import KSigmaWeightF
@@ -23,7 +26,14 @@ class MeasureCoaddsBfdConfig(ProcessCoaddsTogetherConfig):
     """
     filters = ListField(
         dtype=str,
-        default=['u', 'g', 'r', 'i', 'z', 'y'],
+        #default=['u', 'g', 'r', 'i', 'z', 'y'],
+        default=['i'],
+        doc="List of expected bandpass filters."
+    )
+    weights = ListField(
+        dtype=float,
+        #default=[0, 0, 1, 1, 1, 0],
+        default=[1],
         doc="List of expected bandpass filters."
     )
     start_index = Field(
@@ -38,20 +48,57 @@ class MeasureCoaddsBfdConfig(ProcessCoaddsTogetherConfig):
         optional=True,
         doc='optional number to process',
     )
-    use_mag = Field(dtype=bool, default=True, doc="include magnification")
-    use_conc = Field(dtype=bool, default=True, doc="include concentration")
-    weight_n = Field(dtype=int, default=4, doc="n for k-sigma weight function")
-    weight_sigma = Field(dtype=float, default=1.25, doc="sigma for k-sigma weight function")
-    max_shift = Field(dtype=float, default=4, doc="maximum centroid shift")
-    add_single_bands = Field(dtype=bool, default=True, doc="add single band measurements")
-    coaddName = Field(dtype=str, default='deep', doc="name of coadd")
-    grid_size = Field(dtype=int, default=48, doc="minimum size of pixel grid when computing moments")
+    use_mag = Field(
+        dtype=bool,
+        default=False,
+        doc="include magnification"
+    )
+    use_conc = Field(
+        dtype=bool,
+        default=False, 
+        doc="include concentration"
+    )
+    weight_n = Field(
+        dtype=int,
+        default=4,
+        doc="n for k-sigma weight function"
+    )
+    weight_sigma = Field(
+        dtype=float,
+        default=0.76,
+        doc="sigma for k-sigma weight function"
+    )
+    max_shift = Field(
+        dtype=float,
+        default=4,
+        doc="maximum centroid shift"
+    )
+    add_single_bands = Field(
+        dtype=bool,
+        default=False,
+        doc="add single band measurements"
+    )
+    coaddName = Field(
+        dtype=str,
+        default='deep',
+        doc="name of coadd"
+    )
+    grid_size = Field(
+        dtype=int,
+        default=-1,
+        doc="minimum size of pixel grid when computing moments"
+    )
+    footprint_size = Field(
+        dtype=int,
+        default=64,
+        doc="size of footprint, must be even"
+    )
 
     def setDefaults(self):
         """
         prefix for the output file
         """
-        self.output.name = "deepCoadd_moments"
+        self.output = "deepCoadd_moments"
 
 
 class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
@@ -72,7 +119,8 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                 if refSchema is None:
                     refSchema = SourceCatalog.Table.makeMinimalSchema()
             else:
-                refSchema = butler.get(self.config.ref.name + "_schema").schema
+                refSchema = butler.get(self.config.ref + "_schema").schema
+
         self.ncolors = len(self.config.filters) - 1
         self.bfd = BFDConfig(use_conc=self.config.use_conc, use_mag=self.config.use_mag,
                              ncolors=self.ncolors)
@@ -159,7 +207,7 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
 
         tm0 = time.time()
         nproc = 0
-        #import pdb;pdb.set_trace()
+
         # Make an empty catalog
         output = SourceCatalog(self.schema)
 
@@ -172,7 +220,6 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         else:
             max_index = self.config.start_index + self.config.num_to_process
 
-        #for n, (refRecord) in enumerate(zip(ref)):
         for n, (refRecord, outRecord) in enumerate(zip(ref, output)):
             if n < min_index or n >= max_index:
                 continue
@@ -182,10 +229,8 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                 outRecord.set(self.parent_flag, 1)
                 continue
 
-            #outRecord = output.table.copyRecord(refRecord, self.mapper)
-            #output._append(outRecord)
-
-            self.log.info('index: %06d/%06d' % (n, max_index))
+            if n % 1000 == 0:
+                self.log.info('index: %06d/%06d' % (n, max_index))
             nproc += 1
 
             outRecord.setFootprint(None)  # copied from ref; don't need to write these again
@@ -198,15 +243,18 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                 kgals = self.buildKGalaxy(refRecord, images)
                 kc = KColorGalaxy(self.bfd, kgals)
 
-            except Exception as e:
+            except Exception:
                 kc = None
 
             if kc is None:
                 outRecord.set(self.flag, 1)
+                for r in replacers.values():
+                    r.removeSource(refRecord.getId())
                 continue
 
             dx, badcentering, msg = kc.recenter(self.config.weight_sigma)
 
+            # if centering failed, measure moments still without shifting
             if badcentering:
                 self.log.info('Bad centering %s', msg)
                 outRecord.set(self.flag, 1)
@@ -268,6 +316,8 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
     def buildKGalaxy(self, record, exposures):
 
         center = record.getCentroid()
+
+        # For wcs use the first band since a single tract should have the same wcs
         band = self.config.filters[0]
         local_lin_wcs = exposures[band].getWcs().linearizePixelToSky(center, afwGeom.arcseconds)
 
@@ -275,7 +325,13 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         sky_pos = exposures[band].getWcs().pixelToSky(center)
         uvref = (sky_pos.getRa().asArcseconds(), sky_pos.getDec().asArcseconds())
 
-        box = record.getFootprint().getBBox()
+        if self.config.footprint_size is None or self.config.footprint_size < 0:
+            box = record.getFootprint().getBBox()
+        else:
+            box = geom.Box2I(geom.Point2I(int(center.getX()), int(center.getY())),
+                             geom.Extent2I(1,1))
+            box.grow(self.config.footprint_size//2)
+
         xy_pos = (center.getX() - box.getMinX(), center.getY() - box.getMinY())
 
         bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
@@ -284,20 +340,17 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         for band in self.config.filters:
             exposure = exposures[band]
             factor = exposure.getMetadata().get('variance_scale')
-            noise = np.sqrt(np.median(exposure.variance[box].array)/factor)
-            image = exposure.image[box].array
+            exp_box = geom.Box2I(box)
+            exp_box.clip(exposure.getBBox())
+            noise = np.sqrt(np.median(exposure.variance[exp_box].array))
+            image = exposure.image[exp_box].array
 
             psf_image = exposure.getPsf().computeKernelImage(center).array
 
-            kdata = bfd.generalImage(image, uvref, psf_image, wcs=bfd_wcs, pixel_noise=noise, size=self.config.grid_size)
+            kdata = bfd.generalImage(image, uvref, psf_image, wcs=bfd_wcs, pixel_noise=noise,
+                                     size=self.config.grid_size)
             conjugate = set(np.where(kdata.conjugate.flatten()==False)[0])
-            kgal = self.bfd.KGalaxy(self.weight, kdata.kval.flatten(), kdata.kx.flatten(), kdata.ky.flatten(),
-                                    kdata.kvar.flatten(), kdata.d2k, conjugate)
+            kgal = self.bfd.KGalaxy(self.weight, kdata.kval.flatten(), kdata.kx.flatten(), 
+                                    kdata.ky.flatten(), kdata.kvar.flatten(), kdata.d2k, conjugate)
             kgals.append(kgal)
         return kgals
-
-    def selection(self, ref):
-        childName = 'deblend_nChild'
-        if ref.getParent() == 0 and ref.get(childName) > 0:
-            return False
-        return True
