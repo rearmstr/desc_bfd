@@ -119,7 +119,7 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                 if refSchema is None:
                     refSchema = SourceCatalog.Table.makeMinimalSchema()
             else:
-                refSchema = butler.get(self.config.ref + "_schema").schema
+                refSchema = butler.get(self.config.ref_schema + "_schema").schema
 
         self.ncolors = len(self.config.filters) - 1
         self.bfd = BFDConfig(use_conc=self.config.use_conc, use_mag=self.config.use_mag,
@@ -256,7 +256,7 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
 
             # if centering failed, measure moments still without shifting
             if badcentering:
-                self.log.info('Bad centering %s', msg)
+                self.log.debug('Bad centering %s', msg)
                 outRecord.set(self.flag, 1)
                 outRecord.set(self.centroid_flag, 1)
                 dx = [0, 0]

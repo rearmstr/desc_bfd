@@ -24,6 +24,11 @@ class ProcessCoaddsTogetherConfig(Config):
         default="deepCoadd_ref",
         dtype=str,
     )
+    ref_schema = Field(
+        doc="Coadd catalog DatasetType reference input (one instance across all bands).",
+        default="deepCoadd_ref",
+        dtype=str,
+    )
     output = Field(
         doc="Output catalog DatasetType (one instance across all bands)",
         default=None,   # Must be overridden by derived classes to a DatasetType known to obs_base
