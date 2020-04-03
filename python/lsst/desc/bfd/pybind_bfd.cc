@@ -263,7 +263,8 @@ static void declareKGalaxy(py::module &mod, bool fix_center, bool use_conc,
                    const Vector &, const Vector &, FP, const std::set<int>,
                    const DVector2 &, const long, FP>(),
           "kw"_a, "kval"_a, "kx"_a, "ky"_a, "kvar_"_a, "d2k"_a,
-          "unconjugated"_a, "posn_"_a = DVector2(0.), "id_"_a = 0L, "nda"_a = 1.);
+          "unconjugated"_a, "posn_"_a = DVector2(0.), "id_"_a = 0L,
+          "nda"_a = 1.);
   cls.def("getSheared", &KGalaxy<BC>::getSheared, "g1"_a, "g2"_a, "mu"_a);
   cls.def("getMoment", &KGalaxy<BC>::getMoment);
   cls.def("getShifted", &KGalaxy<BC>::getShifted, "dx"_a, "dy"_a);
@@ -365,14 +366,12 @@ static void declareTemplateGalaxy(py::module &mod, bool fix_center,
   cls.attr("DVb_DVb") = py::int_(TG::DVb_DVb);
   cls.attr("DV_DVb") = py::int_(TG::DVb_DVb);
   cls.attr("DSIZE") = py::int_(TG::DSIZE);
-} 
-
+}
 
 template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
           bool USE_FLOAT>
-static void declareTemplateInfo(py::module &mod, bool fix_center,
-                                bool use_conc, bool use_mag, int n_colors,
-                                bool use_float) {
+static void declareTemplateInfo(py::module &mod, bool fix_center, bool use_conc,
+                                bool use_mag, int n_colors, bool use_float) {
   std::string label = optionsToString("TemplateInfo", FIX_CENTER, USE_CONC,
                                       USE_MAG, N_COLORS, USE_FLOAT);
 
@@ -380,7 +379,7 @@ static void declareTemplateInfo(py::module &mod, bool fix_center,
 
   PyTemplateInfo<BC> cls(mod, label.c_str());
   cls.def(py::init<>());
-  cls.def(py::init<const TemplateGalaxy<BC>& >(), "tmpl"_a);
+  cls.def(py::init<const TemplateGalaxy<BC> &>(), "tmpl"_a);
   cls.def_readwrite("dm", &TemplateInfo<BC>::dm);
   cls.def_readwrite("dxy", &TemplateInfo<BC>::dxy);
   cls.def_readwrite("nda", &TemplateInfo<BC>::nda);
@@ -403,7 +402,7 @@ class PqrWrapper {
   typedef typename CONFIG::PqrVector PqrVector;
 
  public:
-  PqrWrapper(): p() {}
+  PqrWrapper() : p() {}
   PqrWrapper(Pqr<CONFIG> _p) : p(_p) {}
   PqrWrapper(PqrVector _p) : p(_p) {}
   Pqr<CONFIG> p;
@@ -435,13 +434,15 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
           "sigmaCutoff_"_a = 6.5, "sigmaBuffer_"_a = 1.,
           "invariantCovariance_"_a = false, "fixedNoise_"_a = false);
   cls.def("prepare", &KDTreePrior<BC>::prepare);
-  cls.def("getPqr", [](const KDTreePrior<BC> &self, const TargetGalaxy<BC> &gal) {
-    int  nTemplates, nUnique;
-    Pqr<BC> pqr = self.getPqr(gal, nTemplates, nUnique);
-    return std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
-  });
-  cls.def("getPqrCatalog", [](const KDTreePrior<BC> &self, const vector<TargetGalaxy<BC>> &gals, int nthreads, int chunk) {
-  
+  cls.def("getPqr",
+          [](const KDTreePrior<BC> &self, const TargetGalaxy<BC> &gal) {
+            int nTemplates, nUnique;
+            Pqr<BC> pqr = self.getPqr(gal, nTemplates, nUnique);
+            return std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+          });
+  cls.def("getPqrCatalog", [](const KDTreePrior<BC> &self,
+                              const vector<TargetGalaxy<BC>> &gals,
+                              int nthreads, int chunk) {
     vector<tuple<PqrWrapper<BC>, int, int>> results(gals.size());
     int nTemplates, nUnique;
 
@@ -449,26 +450,26 @@ static void declareKDTreePrior(py::module &mod, bool fix_center, bool use_conc,
     omp_set_num_threads(nthreads);
 #pragma omp parallel for schedule(dynamic, chunk)
 #endif
-    for (int i=0;i < gals.size(); ++i) {
+    for (int i = 0; i < gals.size(); ++i) {
       Pqr<BC> pqr = self.getPqr(gals[i], nTemplates, nUnique);
-      results[i]=std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+      results[i] = std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
     }
     return results;
   });
   cls.def("setSampleWeights", &KDTreePrior<BC>::setSampleWeights, "b"_a);
-  cls.def("addTemplate", &KDTreePrior<BC>::addTemplate, "gal"_a, "flip"_a = true);
+  cls.def("addTemplate", &KDTreePrior<BC>::addTemplate, "gal"_a,
+          "flip"_a = true);
   cls.def("addTemplateInfo", &KDTreePrior<BC>::addTemplateInfo, "info"_a);
-  cls.def_readonly("templates", &KDTreePrior<BC>::templatePtrs, 
+  cls.def_readonly("templates", &KDTreePrior<BC>::templatePtrs,
                    py::return_value_policy::reference_internal);
 }
-
 
 template <bool FIX_CENTER, bool USE_CONC, bool USE_MAG, int N_COLORS,
           bool USE_FLOAT>
 static void declarePrior(py::module &mod, bool fix_center, bool use_conc,
-                               bool use_mag, int n_colors, bool use_float) {
-  std::string label = optionsToString("Prior", FIX_CENTER, USE_CONC,
-                                      USE_MAG, N_COLORS, USE_FLOAT);
+                         bool use_mag, int n_colors, bool use_float) {
+  std::string label = optionsToString("Prior", FIX_CENTER, USE_CONC, USE_MAG,
+                                      N_COLORS, USE_FLOAT);
 
   typedef BfdConfig<FIX_CENTER, USE_CONC, USE_MAG, N_COLORS, USE_FLOAT> BC;
   typedef typename BC::FP FP;
@@ -481,43 +482,44 @@ static void declarePrior(py::module &mod, bool fix_center, bool use_conc,
   typedef linalg::Matrix<std::complex<FP>> DerivMatrix;
 
   PyPrior<BC> cls(mod, label.c_str());
-  cls.def(py::init<FP, FP, const MomentCovariance<BC> &,
-                   ran::UniformDeviate<double> &, bool, FP, FP, FP,
-                   bool, bool>(),
-          "fluxMin_"_a, "fluxMax_"_a, "nominalCov"_a, "ud_"_a, 
-          "selectionOnly_"_a = false, "noiseFactor"_a = 1., "sigmaStep_"_a = 1.,
-          "sigmaCutoff_"_a = 6.5, 
-          "invariantCovariance_"_a = false, "fixedNoise_"_a = false);
+  cls.def(
+      py::init<FP, FP, const MomentCovariance<BC> &,
+               ran::UniformDeviate<double> &, bool, FP, FP, FP, bool, bool>(),
+      "fluxMin_"_a, "fluxMax_"_a, "nominalCov"_a, "ud_"_a,
+      "selectionOnly_"_a = false, "noiseFactor"_a = 1., "sigmaStep_"_a = 1.,
+      "sigmaCutoff_"_a = 6.5, "invariantCovariance_"_a = false,
+      "fixedNoise_"_a = false);
   cls.def("prepare", &Prior<BC>::prepare);
   cls.def("getPqr", [](const Prior<BC> &self, const TargetGalaxy<BC> &gal) {
-    int  nTemplates, nUnique;
+    int nTemplates, nUnique;
     Pqr<BC> pqr = self.getPqr(gal, nTemplates, nUnique);
     return std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
   });
-  cls.def("getPqrCatalog", [](const Prior<BC> &self, const vector<TargetGalaxy<BC>> &gals, int nthreads, int chunk) {
-  
-    vector<tuple<PqrWrapper<BC>, int, int>> results(gals.size());
-    int index=0;
-    int nTemplates, nUnique;
+  cls.def("getPqrCatalog",
+          [](const Prior<BC> &self, const vector<TargetGalaxy<BC>> &gals,
+             int nthreads, int chunk) {
+            vector<tuple<PqrWrapper<BC>, int, int>> results(gals.size());
+            int index = 0;
+            int nTemplates, nUnique;
 
 #ifdef _OPENMP
-    omp_set_num_threads(nthreads);
+            omp_set_num_threads(nthreads);
 #pragma omp parallel for schedule(dynamic, chunk)
 #endif
-    for (int i=0;i < gals.size(); ++i) {
-      Pqr<BC> pqr = self.getPqr(gals[i], nTemplates, nUnique);
-      results[index]=std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
-      index+=1;
-    }
-    return results;
-  });
+            for (int i = 0; i < gals.size(); ++i) {
+              Pqr<BC> pqr = self.getPqr(gals[i], nTemplates, nUnique);
+              results[index] =
+                  std::make_tuple(PqrWrapper<BC>(pqr), nTemplates, nUnique);
+              index += 1;
+            }
+            return results;
+          });
   cls.def("addTemplate", &Prior<BC>::addTemplate, "gal"_a, "flip"_a = true);
   cls.def("addTemplateInfo", &Prior<BC>::addTemplateInfo, "info"_a);
   cls.def("getNTemplates", &Prior<BC>::getNTemplates);
-  //cls.def_readonly("templates", &Prior<BC>::templatePtrs, 
+  // cls.def_readonly("templates", &Prior<BC>::templatePtrs,
   //                 py::return_value_policy::reference_internal);
 }
-
 
 template <class BC>
 std::string formatPqrStr(PqrWrapper<BC> const &self) {
@@ -565,7 +567,7 @@ static void declarePqr(py::module &mod, bool fix_center, bool use_conc,
             return PqrWrapper<BC>(self.p * other);
           },
           py::is_operator());
-    cls.def("__truediv__",
+  cls.def("__truediv__",
           [](PqrWrapper<BC> &self, FP other) {
             return PqrWrapper<BC>(self.p / other);
           },
@@ -608,14 +610,12 @@ PYBIND11_MODULE(pybind_bfd, mod) {
                                                     true);
   declareTemplateGalaxy<false, false, false, 0, true>(mod, false, false, false,
                                                       0, true);
-  declareTemplateInfo<false, false, false, 0, true>(mod, false, false, false,
-                                                      0, true);
-  declarePrior<false, false, false, 0, true>(mod, false, false, false, 0,
-                                                   true);
+  declareTemplateInfo<false, false, false, 0, true>(mod, false, false, false, 0,
+                                                    true);
+  declarePrior<false, false, false, 0, true>(mod, false, false, false, 0, true);
   declareKDTreePrior<false, false, false, 0, true>(mod, false, false, false, 0,
                                                    true);
   declarePqr<false, false, false, 0, true>(mod, false, false, false, 0, true);
-
 
   // Fix-center=False, concentration=False, mag=True, colors=0, float=True
   declareBfdConfig<false, false, true, 0, true>(mod, false, false, true, 0,
@@ -629,9 +629,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
   declareTemplateGalaxy<false, false, true, 0, true>(mod, false, false, true, 0,
                                                      true);
   declareTemplateInfo<false, false, true, 0, true>(mod, false, false, true, 0,
-                                                     true);
-  declarePrior<false, false, true, 0, true>(mod, false, false, true, 0,
-                                                  true);
+                                                   true);
+  declarePrior<false, false, true, 0, true>(mod, false, false, true, 0, true);
   declareKDTreePrior<false, false, true, 0, true>(mod, false, false, true, 0,
                                                   true);
   declarePqr<false, false, true, 0, true>(mod, false, false, true, 0, true);
@@ -646,9 +645,8 @@ PYBIND11_MODULE(pybind_bfd, mod) {
   declareTemplateGalaxy<false, true, true, 0, true>(mod, false, true, true, 0,
                                                     true);
   declareTemplateInfo<false, true, true, 0, true>(mod, false, true, true, 0,
-                                                    true);
-  declarePrior<false, true, true, 0, true>(mod, false, true, true, 0,
-                                                 true);
+                                                  true);
+  declarePrior<false, true, true, 0, true>(mod, false, true, true, 0, true);
   declareKDTreePrior<false, true, true, 0, true>(mod, false, true, true, 0,
                                                  true);
   declarePqr<false, true, true, 0, true>(mod, false, true, true, 0, true);
@@ -663,12 +661,51 @@ PYBIND11_MODULE(pybind_bfd, mod) {
   declareTemplateGalaxy<false, true, true, 5, true>(mod, false, true, true, 5,
                                                     true);
   declareTemplateInfo<false, true, true, 5, true>(mod, false, true, true, 5,
-                                                    true);
-  declarePrior<false, true, true, 5, true>(mod, false, true, true, 5,
-                                                 true);
+                                                  true);
+  declarePrior<false, true, true, 5, true>(mod, false, true, true, 5, true);
   declareKDTreePrior<false, true, true, 5, true>(mod, false, true, true, 5,
                                                  true);
   declarePqr<false, true, true, 5, true>(mod, false, true, true, 5, true);
+
+  // Add 2 color fluxes
+  declareBfdConfig<false, false, false, 2, true>(mod, false, false, false, 2,
+                                                 true);
+  declareMoment<false, false, false, 2, true>(mod, false, false, false, 2,
+                                              true);
+  declareMomentCov<false, false, false, 2, true>(mod, false, false, false, 2,
+                                                 true);
+  declareKGalaxy<false, false, false, 2, true>(mod, false, false, false, 2,
+                                               true);
+  declareTargetGalaxy<false, false, false, 2, true>(mod, false, false, false, 2,
+                                                    true);
+  declareTemplateGalaxy<false, false, false, 2, true>(mod, false, false, false,
+                                                      2, true);
+  declareTemplateInfo<false, false, false, 2, true>(mod, false, false, false, 2,
+                                                    true);
+  declarePrior<false, false, false, 2, true>(mod, false, false, false, 2, true);
+  declareKDTreePrior<false, false, false, 2, true>(mod, false, false, false, 2,
+                                                   true);
+  declarePqr<false, false, false, 2, true>(mod, false, false, false, 2, true);
+
+  // Add 3 color fluxes normal moments
+  declareBfdConfig<false, false, false, 5, true>(mod, false, false, false, 5,
+                                                 true);
+  declareMoment<false, false, false, 5, true>(mod, false, false, false, 5,
+                                              true);
+  declareMomentCov<false, false, false, 5, true>(mod, false, false, false, 5,
+                                                 true);
+  declareKGalaxy<false, false, false, 5, true>(mod, false, false, false, 5,
+                                               true);
+  declareTargetGalaxy<false, false, false, 5, true>(mod, false, false, false, 5,
+                                                    true);
+  declareTemplateGalaxy<false, false, false, 5, true>(mod, false, false, false,
+                                                      5, true);
+  declareTemplateInfo<false, false, false, 5, true>(mod, false, false, false, 5,
+                                                    true);
+  declarePrior<false, false, false, 5, true>(mod, false, false, false, 5, true);
+  declareKDTreePrior<false, false, false, 5, true>(mod, false, false, false, 5,
+                                                   true);
+  declarePqr<false, false, false, 5, true>(mod, false, false, false, 5, true);
 }
 
 }  // namespace
