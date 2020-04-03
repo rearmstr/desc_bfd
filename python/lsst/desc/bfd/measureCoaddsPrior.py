@@ -823,9 +823,6 @@ class MeasureCoaddsPriorTask(ProcessCoaddsTogetherTask):
                              geom.Extent2I(1,1))
             box.grow(self.config.footprint_size//2)
 
-        xy_pos = (center.getX() - box.getMinX(), center.getY() - box.getMinY())
-
-        bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
 
         kgals = []
         for band in self.config.filters:
@@ -833,6 +830,10 @@ class MeasureCoaddsPriorTask(ProcessCoaddsTogetherTask):
             factor = exposure.getMetadata().get('variance_scale')
             exp_box = geom.Box2I(box)
             exp_box.clip(exposure.getBBox())
+
+            xy_pos = (center.getX() - exp_box.getMinX(), center.getY() - exp_box.getMinY())
+            bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
+            
             noise = np.sqrt(np.median(exposure.variance[exp_box].array))
             image = exposure.image[exp_box].array
 

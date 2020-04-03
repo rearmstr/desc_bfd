@@ -93,6 +93,11 @@ class MeasureCoaddsBfdConfig(ProcessCoaddsTogetherConfig):
         default=64,
         doc="size of footprint, must be even"
     )
+    skip_parent = Field(
+        dtype=bool,
+        default=True,
+        doc="skip parent objects"
+    )
 
     def setDefaults(self):
         """
@@ -152,6 +157,8 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                                              doc="Set to 1 for any fatal failure of centroid")
         self.parent_flag = schema.addField('bfd_flag_parent', type="Flag",
                                             doc="Set to 1 for parents")
+        self.no_peak_flag = schema.addField('bfd_no_peak', type="Flag",
+                                            doc="Flag if object was not observed in given filters")
         if self.config.add_single_bands:
             self.filter_keys = defaultdict(dict)
             self.n_even_single = self.n_even - len(self.config.filters) + 1
@@ -224,14 +231,23 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
             if n < min_index or n >= max_index:
                 continue
 
+
             if refRecord.get('deblend_nChild') != 0:
-                outRecord.set(self.flag, 1)
                 outRecord.set(self.parent_flag, 1)
-                continue
+                if self.config.skip_parent:
+                    outRecord.set(self.flag, 1)
+                    continue
 
             if n % 1000 == 0:
                 self.log.info('index: %06d/%06d' % (n, max_index))
             nproc += 1
+
+            hasPeak = False
+            for filt in self.config.filters:
+                if refRecord.get(f'merge_peak_{filt}'):
+                    hasPeak = True
+            if hasPeak == False:
+                outRecord.set(self.no_peak_flag, 1)
 
             outRecord.setFootprint(None)  # copied from ref; don't need to write these again
 
@@ -241,7 +257,7 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
 
             try:
                 kgals = self.buildKGalaxy(refRecord, images)
-                kc = KColorGalaxy(self.bfd, kgals)
+                kc = KColorGalaxy(self.bfd, kgals, self.config.weights)
 
             except Exception:
                 kc = None
@@ -332,9 +348,6 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
                              geom.Extent2I(1,1))
             box.grow(self.config.footprint_size//2)
 
-        xy_pos = (center.getX() - box.getMinX(), center.getY() - box.getMinY())
-
-        bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
 
         kgals = []
         for band in self.config.filters:
@@ -342,6 +355,10 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
             factor = exposure.getMetadata().get('variance_scale')
             exp_box = geom.Box2I(box)
             exp_box.clip(exposure.getBBox())
+
+            xy_pos = (center.getX() - exp_box.getMinX(), center.getY() - exp_box.getMinY())
+            bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
+
             noise = np.sqrt(np.median(exposure.variance[exp_box].array))
             image = exposure.image[exp_box].array
 
