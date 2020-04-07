@@ -831,7 +831,7 @@ class MeasureCoaddsPriorTask(ProcessCoaddsTogetherTask):
             exp_box = geom.Box2I(box)
             exp_box.clip(exposure.getBBox())
 
-            xy_pos = (center.getX() - exp_box.getMinX(), center.getY() - exp_box.getMinY())
+            xy_pos = (center.getX() - exp_box.getMinX() + 0.5, center.getY() - exp_box.getMinY() + 0.5)
             bfd_wcs = bfd.WCS(jacobian, xyref=xy_pos, uvref=uvref)
             
             noise = np.sqrt(np.median(exposure.variance[exp_box].array))
