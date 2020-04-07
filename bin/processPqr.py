@@ -1,3 +1,3 @@
-#!/Users/armstrong46/opt/anaconda3/envs/mystack/bin/python  # noqa
+#!/usr/bin/env python
 from lsst.desc.bfd.processPqr import ProcessPqrTask
 ProcessPqrTask.parseAndRun()
