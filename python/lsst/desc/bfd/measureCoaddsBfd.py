@@ -9,7 +9,7 @@ import lsst.geom as geom
 from collections import defaultdict
 from lsst.afw.table import SourceCatalog, SchemaMapper
 from lsst.pipe.base import Struct
-from lsst.pex.config import Field, ListField
+from lsst.pex.config import Field, ListField, DictField
 
 from .measureCoaddsTogether import ProcessCoaddsTogetherTask, ProcessCoaddsTogetherConfig
 from .config import BFDConfig
@@ -98,6 +98,16 @@ class MeasureCoaddsBfdConfig(ProcessCoaddsTogetherConfig):
         default=True,
         doc="skip parent objects"
     )
+    copyColumns = DictField(
+        keytype=str, itemtype=str, doc="Mapping of reference columns to source columns",
+        default={"detect_isPrimary": "flag_is_primary", "calib_psf_used": "flag_psf_used",
+                 "base_PixelFlags_flag_edge": "flag_edge", "base_PixelFlags_flag_inexact_psf": "flag_inexact_psf",
+                 "base_PixelFlags_flag_clipped": "flag_clipped",
+                 "base_PsfFlux_instFlux": "psf_flux", "base_PsfFlux_instFluxErr": "psf_flux_err",
+                 "modelfit_CModel_instFlux": "cmodel_flux", "modelfit_CModel_instFluxErr": "cmodel_flux_err",
+                 "merge_peak_i": "flag_peak_i", "merge_peak_sky": "flag_peak_sky",
+                 }
+    )
 
     def setDefaults(self):
         """
@@ -135,11 +145,14 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         self.schema = self.defineSchema(refSchema)
 
     def defineSchema(self, refSchema):
-
         self.mapper = SchemaMapper(refSchema)
         self.mapper.addMinimalSchema(SourceCatalog.Table.makeMinimalSchema(), True)
-        schema = self.mapper.getOutputSchema()
 
+        for refName, targetName in self.config.copyColumns.items():
+            refItem = refSchema.find(refName)
+            self.mapper.addMapping(refItem.key, targetName)
+
+        schema = self.mapper.getOutputSchema()
         self.even = schema.addField('bfd_even', type="ArrayF",
                                     size=self.n_even, doc="Even Bfd moments")
         self.odd = schema.addField('bfd_odd', type="ArrayF",
@@ -155,9 +168,9 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
         self.flag = schema.addField('bfd_flag', type="Flag", doc="Set to 1 for any fatal failure")
         self.centroid_flag = schema.addField('bfd_flag_centroid', type="Flag",
                                              doc="Set to 1 for any fatal failure of centroid")
-        self.parent_flag = schema.addField('bfd_flag_parent', type="Flag",
+        self.parent_flag = schema.addField('flag_parent', type="Flag",
                                             doc="Set to 1 for parents")
-        self.no_peak_flag = schema.addField('bfd_no_peak', type="Flag",
+        self.no_peak_flag = schema.addField('flag_no_peak', type="Flag",
                                             doc="Flag if object was not observed in given filters")
         if self.config.add_single_bands:
             self.filter_keys = defaultdict(dict)
@@ -231,7 +244,7 @@ class MeasureCoaddsBfdTask(ProcessCoaddsTogetherTask):
             if n < min_index or n >= max_index:
                 continue
 
-
+            outRecord.assign(refRecord, self.mapper)
             if refRecord.get('deblend_nChild') != 0:
                 outRecord.set(self.parent_flag, 1)
                 if self.config.skip_parent:
